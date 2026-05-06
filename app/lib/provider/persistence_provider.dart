@@ -80,6 +80,7 @@ const _autoFinish = 'ls_auto_finish';
 const _minimizeToTray = 'ls_minimize_to_tray';
 const _https = 'ls_https';
 const _sendMode = 'ls_send_mode';
+const _sendSequentialFinalize = 'ls_send_sequential_finalize';
 const _enableAnimations = 'ls_enable_animations';
 const _deviceType = 'ls_device_type';
 const _deviceModel = 'ls_device_model';
@@ -430,6 +431,14 @@ class PersistenceService {
 
   Future<void> setSendMode(SendMode mode) async {
     await _prefs.setString(_sendMode, mode.name);
+  }
+
+  bool getSendSequentialFinalize() {
+    return _prefs.getBool(_sendSequentialFinalize) ?? false;
+  }
+
+  Future<void> setSendSequentialFinalize(bool value) async {
+    await _prefs.setBool(_sendSequentialFinalize, value);
   }
 
   Future<void> setWindowOffsetX(double x) async {

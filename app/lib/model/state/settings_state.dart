@@ -28,6 +28,8 @@ class SettingsState with SettingsStateMappable {
   final bool minimizeToTray; // minimize to tray instead of exiting the app
   final bool https;
   final SendMode sendMode;
+  /// When true, uploads keep parallel bandwidth but delay the last chunk until prior files finish (iOS gallery order).
+  final bool sendSequentialFinalize;
   final bool saveWindowPlacement;
   final bool enableAnimations;
   final DeviceType? deviceType;
@@ -56,6 +58,7 @@ class SettingsState with SettingsStateMappable {
     required this.minimizeToTray,
     required this.https,
     required this.sendMode,
+    required this.sendSequentialFinalize,
     required this.saveWindowPlacement,
     required this.enableAnimations,
     required this.deviceType,

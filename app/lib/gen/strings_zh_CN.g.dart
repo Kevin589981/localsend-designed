@@ -973,6 +973,8 @@ class _TranslationsSettingsTabSendZhCn extends TranslationsSettingsTabSendEn {
   String get title => '发送';
   @override
   String get shareViaLinkAutoAccept => '通过链接分享：自动接受';
+  @override
+  String get sequentialFinalize => '串行（iOS 相册顺序完成）';
 }
 
 // Path: settingsTab.network

@@ -24,6 +24,7 @@ import 'package:localsend_app/pages/progress_page.dart';
 import 'package:localsend_app/pages/send_page.dart';
 import 'package:localsend_app/provider/device_info_provider.dart';
 import 'package:localsend_app/provider/http_provider.dart';
+import 'package:localsend_app/provider/network/send_tail_coordinator.dart';
 import 'package:localsend_app/provider/progress_provider.dart';
 import 'package:localsend_app/provider/selection/selected_sending_files_provider.dart';
 import 'package:localsend_app/provider/settings_provider.dart';
@@ -72,11 +73,13 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
       background: background,
       status: SessionStatus.waiting,
       target: target,
-      files: Map.fromEntries(await Future.wait(files.map((file) async {
+      files: Map.fromEntries(await Future.wait(List.generate(files.length, (i) async {
+        final file = files[i];
         final id = _uuid.v4();
         return MapEntry(
           id,
           SendingFile(
+            queueIndex: i,
             file: FileDto(
               id: id,
               fileName: file.name,
@@ -324,27 +327,38 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
     final concurrency = ref.read(parentIsolateProvider).uploadIsolateCount;
     _logger.info('Sending files using $concurrency concurrent isolates');
 
-    final futures = List.generate(concurrency, (index) async {
-      while (true) {
-        final file = switch (queue.isEmpty) {
-          true => null,
-          false => queue.removeFirst(),
-        };
+    final orderedTail = ref.read(settingsProvider).sendSequentialFinalize;
+    SendTailCoordinator? tailCoordinator;
+    if (orderedTail) {
+      tailCoordinator = SendTailCoordinator()..start();
+    }
 
-        if (file == null) {
-          break;
+    try {
+      final futures = List.generate(concurrency, (index) async {
+        while (true) {
+          final file = switch (queue.isEmpty) {
+            true => null,
+            false => queue.removeFirst(),
+          };
+
+          if (file == null) {
+            break;
+          }
+
+          await sendFile(
+            sessionId: sessionId,
+            isolateIndex: index,
+            file: file,
+            isRetry: false,
+            tailCoordinator: tailCoordinator,
+          );
         }
+      });
 
-        await sendFile(
-          sessionId: sessionId,
-          isolateIndex: index,
-          file: file,
-          isRetry: false,
-        );
-      }
-    });
-
-    await Future.wait(futures);
+      await Future.wait(futures);
+    } finally {
+      tailCoordinator?.dispose();
+    }
 
     _finish(sessionId: sessionId);
   }
@@ -391,6 +405,7 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
     required int isolateIndex,
     required SendingFile file,
     required bool isRetry,
+    SendTailCoordinator? tailCoordinator,
   }) async {
     final token = file.token;
     if (token == null) {
@@ -430,54 +445,60 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
       state: (s) => s?.withFileStatus(file.file.id, FileStatus.sending, null),
     );
 
-    final taskResult = ref.redux(parentIsolateProvider).dispatchTakeResult(IsolateHttpUploadAction(
-          isolateIndex: isolateIndex,
-          remoteSessionId: remoteSessionId,
-          remoteFileToken: token,
-          fileId: file.file.id,
-          filePath: file.path,
-          fileBytes: file.bytes,
-          mime: file.file.lookupMime(),
-          fileSize: file.file.size,
-          device: target,
-        ));
-
     String? fileError;
     try {
-      state = state.updateSession(
-        sessionId: sessionId,
-        state: (s) => s?.copyWith(sendingTasks: [
-          ...?s.sendingTasks,
-          SendingTask(
+      final taskResult = ref.redux(parentIsolateProvider).dispatchTakeResult(IsolateHttpUploadAction(
             isolateIndex: isolateIndex,
-            taskId: taskResult.taskId,
-          ),
-        ]),
-      );
+            remoteSessionId: remoteSessionId,
+            remoteFileToken: token,
+            fileId: file.file.id,
+            filePath: file.path,
+            fileBytes: file.bytes,
+            mime: file.file.lookupMime(),
+            fileSize: file.file.size,
+            device: target,
+            orderedTailFinalize: tailCoordinator != null,
+            finishOrderIndex: file.queueIndex,
+            tailCoordinatorSendPort: tailCoordinator?.requestSendPort,
+          ));
 
-      await for (final progress in taskResult.progress) {
+      try {
+        state = state.updateSession(
+          sessionId: sessionId,
+          state: (s) => s?.copyWith(sendingTasks: [
+            ...?s.sendingTasks,
+            SendingTask(
+              isolateIndex: isolateIndex,
+              taskId: taskResult.taskId,
+            ),
+          ]),
+        );
+
+        await for (final progress in taskResult.progress) {
+          ref.notifier(progressProvider).setProgress(
+                sessionId: sessionId,
+                fileId: file.file.id,
+                progress: progress,
+              );
+        }
+
+        // set progress to 100% when successfully finished
         ref.notifier(progressProvider).setProgress(
               sessionId: sessionId,
               fileId: file.file.id,
-              progress: progress,
+              progress: 1,
             );
+      } finally {
+        tailCoordinator?.onFileUploadFinished(file.queueIndex);
+        state = state.updateSession(
+          sessionId: sessionId,
+          state: (s) => s?.copyWith(
+              sendingTasks: s.sendingTasks?.where((task) => !(task.isolateIndex == isolateIndex && task.taskId == taskResult.taskId)).toList()),
+        );
       }
-
-      // set progress to 100% when successfully finished
-      ref.notifier(progressProvider).setProgress(
-            sessionId: sessionId,
-            fileId: file.file.id,
-            progress: 1,
-          );
     } catch (e, st) {
       fileError = e.humanErrorMessage;
       _logger.warning('Error while sending file ${file.file.fileName}', e, st);
-    } finally {
-      state = state.updateSession(
-        sessionId: sessionId,
-        state: (s) => s?.copyWith(
-            sendingTasks: s.sendingTasks?.where((task) => !(task.isolateIndex == isolateIndex && task.taskId == taskResult.taskId)).toList()),
-      );
     }
 
     state = state.updateSession(

@@ -657,6 +657,7 @@ class TranslationsSettingsTabSendEn {
   // Translations
   String get title => 'Send';
   String get shareViaLinkAutoAccept => 'Automatically accept requests in "Share via link" mode';
+  String get sequentialFinalize => 'Serial (ordered completion for iOS Photos)';
 }
 
 // Path: settingsTab.network

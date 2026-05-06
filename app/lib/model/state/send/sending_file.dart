@@ -9,6 +9,8 @@ part 'sending_file.mapper.dart';
 
 @MappableClass()
 class SendingFile with SendingFileMappable {
+  /// Index in the outgoing send queue (0-based). Used for ordered tail finalize.
+  final int queueIndex;
   final FileDto file;
   final FileStatus status;
   final String? token;
@@ -19,6 +21,7 @@ class SendingFile with SendingFileMappable {
   final String? errorMessage; // when status == failed
 
   const SendingFile({
+    required this.queueIndex,
     required this.file,
     required this.status,
     required this.token,

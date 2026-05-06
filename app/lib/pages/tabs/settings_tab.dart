@@ -259,6 +259,13 @@ class SettingsTab extends StatelessWidget {
                       await ref.notifier(settingsProvider).setShareViaLinkAutoAccept(b);
                     },
                   ),
+                  _BooleanEntry(
+                    label: t.settingsTab.send.sequentialFinalize,
+                    value: vm.settings.sendSequentialFinalize,
+                    onChanged: (b) async {
+                      await ref.notifier(settingsProvider).setSendSequentialFinalize(b);
+                    },
+                  ),
                 ],
               ),
             _SettingsSection(

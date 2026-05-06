@@ -124,7 +124,8 @@
     },
     "send": {
       "title": "Send",
-      "shareViaLinkAutoAccept": "Automatically accept requests in \"Share via link\" mode"
+      "shareViaLinkAutoAccept": "Automatically accept requests in \"Share via link\" mode",
+      "sequentialFinalize": "Serial (ordered completion for iOS Photos)"
     },
     "network": {
       "title": "Network",

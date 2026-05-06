@@ -124,7 +124,8 @@
     },
     "send": {
       "title": "发送",
-      "shareViaLinkAutoAccept": "通过链接分享：自动接受"
+      "shareViaLinkAutoAccept": "通过链接分享：自动接受",
+      "sequentialFinalize": "串行（iOS 相册顺序完成）"
     },
     "network": {
       "title": "网络",
