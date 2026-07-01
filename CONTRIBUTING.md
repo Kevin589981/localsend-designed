@@ -76,14 +76,14 @@ Git based distribution:
 [chocolatey repo]: https://github.com/brogers5/chocolatey-package-localsend/tree/main
 [homebrew]: https://formulae.brew.sh/cask/localsend
 [homebrew repo]: https://github.com/Homebrew/homebrew-cask/blob/master/Casks/l/localsend.rb
-[flathub]: https://flathub.org/apps/details/org.localsend.localsend_app
-[flathub repo]: https://github.com/flathub/org.localsend.localsend_app
+[flathub]: https://flathub.org/apps/details/com.localsend.localsend_app
+[flathub repo]: https://github.com/flathub/com.localsend.localsend_app
 [aur]: https://aur.archlinux.org/packages/localsend-bin
 [aur repo]: https://aur.archlinux.org/localsend-bin.git
 [nixpkgs]: https://search.nixos.org/packages?show=localsend
 [nixpkgs repo]: https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/localsend/default.nix
-[f-droid]: https://f-droid.org/packages/org.localsend.localsend_app
-[f-droid repo]: https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/org.localsend.localsend_app.yml
+[f-droid]: https://f-droid.org/packages/com.localsend.localsend_app
+[f-droid repo]: https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/com.localsend.localsend_app.yml
 [snap]: https://snapcraft.io/localsend
 [snap repo]: https://github.com/localsend/snap
 
@@ -96,7 +96,7 @@ Manual distribution:
 | [Amazon][]     | [@Tienisto](https://github.com/Tienisto) |
 
 [app store]: https://apps.apple.com/us/app/localsend/id1661733229
-[play store]: https://play.google.com/store/apps/details?id=org.localsend.localsend_app
+[play store]: https://play.google.com/store/apps/details?id=com.localsend.localsend_app
 [amazon]: https://www.amazon.com/dp/B0BW6MP732
 
 Binary distribution:

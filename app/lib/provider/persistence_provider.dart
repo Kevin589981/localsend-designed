@@ -37,7 +37,7 @@ String get _windowsFile {
 
 String get _windowsLegacyFile {
   final appData = Platform.environment['APPDATA'];
-  return '$appData\\org.localsend\\localsend_app\\shared_preferences.json';
+  return '$appData\\com.localsend\\localsend_app\\shared_preferences.json';
 }
 
 // Version of the storage

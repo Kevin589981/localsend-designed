@@ -67,6 +67,42 @@ class ServerService extends Notifier<ServerState?> {
     return null;
   }
 
+  /// Checks if the server port is alive via loopback test.
+  /// If the port is dead (e.g., killed by iOS background suspension),
+  /// performs a safe restart: stop -> delay -> start.
+  Future<void> recoverServerIfNeeded() async {
+    if (state == null) return;
+
+    final port = state!.port;
+
+    Socket? socket;
+    bool isPortAlive = false;
+    try {
+      socket = await Socket.connect(
+        '127.0.0.1',
+        port,
+        timeout: const Duration(milliseconds: 500),
+      );
+      isPortAlive = true;
+    } catch (_) {
+      isPortAlive = false;
+    } finally {
+      await socket?.close();
+    }
+
+    if (!isPortAlive) {
+      _logger.warning('Port $port is dead. Recovering server...');
+      try {
+        await stopServer();
+        await Future.delayed(const Duration(milliseconds: 300));
+        await startServerFromSettings();
+        _logger.info('Server recovered successfully.');
+      } catch (e) {
+        _logger.severe('Failed to recover server: $e');
+      }
+    }
+  }
+
   /// Starts the server from user settings.
   Future<ServerState?> startServerFromSettings() async {
     final settings = ref.read(settingsProvider);
