@@ -59,7 +59,7 @@ jobs:
       - name: Detect project type
         id: detect
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -f "app/pubspec.yaml" ] || [ -f "pubspec.yaml" ]; then
             echo "type=flutter" >> $GITHUB_OUTPUT
           elif [ -f "package.json" ] && grep -q '"expo"' package.json; then
             echo "type=expo" >> $GITHUB_OUTPUT
@@ -68,7 +68,13 @@ jobs:
           else
             echo "type=native" >> $GITHUB_OUTPUT
           fi
-
+      
+      - name: Setup Rust for iOS
+        if: steps.detect.outputs.type == 'flutter'
+        run: |
+          rustup show
+          rustup target add aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim
+      
       - name: Setup Flutter
         if: steps.detect.outputs.type == 'flutter'
         uses: subosito/flutter-action@v2
@@ -79,7 +85,10 @@ jobs:
 
       - name: Flutter pub get
         if: steps.detect.outputs.type == 'flutter'
-        run: flutter pub get
+        run: |
+          if [ -d "common" ]; then cd common && flutter pub get && cd ..; fi
+          if [ -d "cli" ]; then cd cli && flutter pub get && cd ..; fi
+          if [ -d "app" ]; then cd app && flutter pub get && cd ..; fi
 
       - name: Setup Node.js
         if: steps.detect.outputs.type == 'reactnative' || steps.detect.outputs.type == 'expo'
