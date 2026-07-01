@@ -2,6 +2,7 @@ import 'dart:convert' show utf8;
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:common/model/file_type.dart';
 import 'package:localsend_app/model/cross_file.dart';
 import 'package:localsend_app/util/file_path_helper.dart';
@@ -17,6 +18,14 @@ import 'package:uuid/uuid.dart';
 
 final _logger = Logger('SelectedSendingFiles');
 const _uuid = Uuid();
+
+/// Sort key for the outgoing send list: [CrossFile.name] is the display path (e.g. `folder/a/b.png`).
+///
+/// [Directory.list] and multi-select drops do not guarantee any human-friendly order; we sort so
+/// [queueIndex] / UI order follow **natural order** (embedded numbers compared numerically), similar
+/// to Explorer/Finder, using [compareAsciiLowerCaseNatural] from `package:collection`.
+int _compareCrossFileSendOrder(CrossFile a, CrossFile b) =>
+    compareAsciiLowerCaseNatural(a.name, b.name);
 
 /// Manages files selected for sending.
 /// Will stay alive even after a session has been completed to send the same files to another device.
@@ -135,6 +144,7 @@ class AddFilesAction<T> extends AsyncReduxAction<SelectedSendingFilesNotifier, L
         newFiles.add(crossFile);
       }
     }
+    newFiles.sort(_compareCrossFileSendOrder);
     return List.unmodifiable([
       ...state,
       ...newFiles,
@@ -191,6 +201,7 @@ class AddDirectoryAction extends AsyncReduxAction<SelectedSendingFilesNotifier, 
       }
     }
 
+    newFiles.sort(_compareCrossFileSendOrder);
     return List.unmodifiable([
       ...state,
       ...newFiles,
@@ -251,6 +262,7 @@ class AddAndroidDirectoryAction extends AsyncReduxAction<SelectedSendingFilesNot
       }
     }
 
+    newFiles.sort(_compareCrossFileSendOrder);
     return List.unmodifiable([
       ...state,
       ...newFiles,

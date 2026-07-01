@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:isolate';
 
 import 'package:common/model/device.dart';
 import 'package:common/src/isolate/child/http_scan_discovery_isolate.dart';
@@ -184,6 +185,9 @@ class IsolateHttpUploadAction extends ReduxActionWithResult<IsolateController, P
   final String mime;
   final int fileSize;
   final Device device;
+  final bool orderedTailFinalize;
+  final int finishOrderIndex;
+  final SendPort? tailCoordinatorSendPort;
 
   IsolateHttpUploadAction({
     required this.isolateIndex,
@@ -195,6 +199,9 @@ class IsolateHttpUploadAction extends ReduxActionWithResult<IsolateController, P
     required this.mime,
     required this.fileSize,
     required this.device,
+    this.orderedTailFinalize = false,
+    this.finishOrderIndex = 0,
+    this.tailCoordinatorSendPort,
   });
 
   @override
@@ -210,6 +217,9 @@ class IsolateHttpUploadAction extends ReduxActionWithResult<IsolateController, P
       mime: mime,
       fileSize: fileSize,
       device: device,
+      orderedTailFinalize: orderedTailFinalize,
+      finishOrderIndex: finishOrderIndex,
+      tailCoordinatorSendPort: tailCoordinatorSendPort,
     );
 
     final taskId = _idProvider.getNextId();

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:common/isolate.dart';
@@ -8,6 +10,7 @@ import 'package:common/src/isolate/dto/isolate_task.dart';
 import 'package:common/src/isolate/dto/isolate_task_result.dart';
 import 'package:common/src/isolate/dto/send_to_isolate_data.dart';
 import 'package:common/src/task/upload/http_upload.dart';
+import 'package:common/src/task/upload/ordered_tail_upload_stream.dart';
 import 'package:common/util/stream.dart';
 import 'package:meta/meta.dart';
 import 'package:refena/refena.dart';
@@ -31,6 +34,9 @@ class HttpUploadTask implements BaseHttpUploadTask {
   final String mime;
   final int fileSize;
   final Device device;
+  final bool orderedTailFinalize;
+  final int finishOrderIndex;
+  final SendPort? tailCoordinatorSendPort;
 
   HttpUploadTask({
     required this.remoteSessionId,
@@ -41,6 +47,9 @@ class HttpUploadTask implements BaseHttpUploadTask {
     required this.mime,
     required this.fileSize,
     required this.device,
+    this.orderedTailFinalize = false,
+    this.finishOrderIndex = 0,
+    this.tailCoordinatorSendPort,
   });
 }
 
@@ -102,14 +111,31 @@ Future<void> setupHttpUploadIsolate(
               : File(uploadTask.filePath!).openRead()
           : null;
 
-      final (streamController, subscription) = fileStream?.digested() ?? (null, null);
+      StreamController<List<int>>? streamController;
+      StreamSubscription<List<int>>? subscription;
+
+      final Stream<List<int>> rawUploadStream = fileStream != null
+          ? (() {
+              final digested = fileStream.digested();
+              streamController = digested.$1;
+              subscription = digested.$2;
+              return streamController!.stream;
+            })()
+          : Stream.fromIterable([uploadTask.fileBytes!]);
 
       try {
         final cancelToken = CustomCancelToken();
         ref.read(_cancelTokenProvider).putIfAbsent(task.id, () => cancelToken);
 
+        final uploadStream = wrapUploadStreamWithOrderedTail(
+          source: rawUploadStream,
+          enabled: uploadTask.orderedTailFinalize,
+          finishOrderIndex: uploadTask.finishOrderIndex,
+          tailGateSendPort: uploadTask.tailCoordinatorSendPort,
+        );
+
         await ref.read(httpUploadProvider).upload(
-              stream: streamController?.stream ?? Stream.fromIterable([uploadTask.fileBytes!]),
+              stream: uploadStream,
               contentLength: uploadTask.fileSize,
               contentType: uploadTask.mime,
               target: uploadTask.device,
