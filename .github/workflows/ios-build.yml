@@ -79,9 +79,23 @@ jobs:
         if: steps.detect.outputs.type == 'flutter'
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ inputs.flutter_version || '' }}
+          # flutter-version: ${{ inputs.flutter_version || '' }}
+          flutter-version: '3.24.5'
           channel: ${{ inputs.flutter_version && 'stable' || 'stable' }}
           cache: true
+          
+      - name: Install Rust
+        if: steps.detect.outputs.type == 'flutter'
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: '1.84.1'   # 必须对齐官方的 1.84.1 版本
+
+      - name: Setup Rust iOS targets
+        if: steps.detect.outputs.type == 'flutter'
+        run: |
+          rustup target add aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim
+          rustup show
 
       - name: Flutter pub get
         if: steps.detect.outputs.type == 'flutter'
