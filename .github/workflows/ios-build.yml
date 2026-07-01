@@ -181,8 +181,8 @@ jobs:
         run: |
           set -e
 
-          # Navigate to iOS project
-          cd "$IOS_PATH"
+          # Navigate to iOS project safely using absolute path
+          cd "$GITHUB_WORKSPACE/$IOS_PATH"
 
           # Find workspace or project
           WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" | head -1)
@@ -220,7 +220,8 @@ jobs:
               echo "Building Flutter iOS Release..."
               flutter build ios --release --no-codesign
             fi
-            cd "$IOS_PATH"
+            # Return to iOS directory safely using absolute path
+            cd "$GITHUB_WORKSPACE/$IOS_PATH"
           elif [ "$PROJECT_TYPE" = "reactnative" ] || [ "$PROJECT_TYPE" = "expo" ]; then
             # Use xcodebuild directly for React Native/Expo
             echo "Building React Native iOS ($CONFIGURATION)..."
@@ -286,7 +287,7 @@ jobs:
           # Create IPA
           if [ "$USE_SIGNING" = "true" ]; then
             # For signed builds, use xcodebuild -exportArchive
-            cd ..
+            cd "$GITHUB_WORKSPACE"
             printf '%s\n' \
               '<?xml version="1.0" encoding="UTF-8"?>' \
               '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
@@ -304,13 +305,14 @@ jobs:
               -exportPath build/export
 
             # Move IPA to expected location
+            mkdir -p build
             mv build/export/*.ipa "build/$BUILD_ID.ipa"
             echo "Created signed IPA: build/$BUILD_ID.ipa"
           else
             # For unsigned builds, find .app and create IPA
             if [ "$PROJECT_TYPE" = "flutter" ]; then
-              # Flutter outputs to build/ios/iphoneos/
-              APP_PATH=$(find "${GITHUB_WORKSPACE}/build/ios/iphoneos" -name "*.app" -type d | head -1)
+              # Safely find .app dynamically anywhere in the workspace
+              APP_PATH=$(find "$GITHUB_WORKSPACE" -path "*/build/ios/iphoneos/*.app" -type d | head -1)
             else
               # Native and React Native/Expo use DerivedData
               APP_PATH=$(find "$DERIVED_DATA_PATH/Build/Products/${CONFIGURATION}-iphoneos" -name "*.app" -type d | head -1)
@@ -321,7 +323,9 @@ jobs:
               exit 1
             fi
             echo "Found app at: $APP_PATH"
-            cd ..
+            
+            # Go back to workspace root so artifacts upload correctly
+            cd "$GITHUB_WORKSPACE"
             mkdir -p build/Payload
             cp -R "$APP_PATH" build/Payload/
             cd build
