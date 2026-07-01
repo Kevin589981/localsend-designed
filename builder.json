@@ -1,0 +1,16 @@
+{
+  "project": "my-localsend",
+  "platform": "ios",
+  "github": {
+    "owner": "Kevin589981",
+    "repo": "localsend-designed"
+  },
+  "ios": {
+    "path": "app/ios"
+  },
+  "flutter": {
+    "watch": {}
+  },
+  "reactNative": {},
+  "mobai": {}
+}
